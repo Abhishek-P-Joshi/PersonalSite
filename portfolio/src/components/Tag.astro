@@ -1,0 +1,12 @@
+---
+export interface Props {
+  variant?: 'default' | 'accent';
+  class?: string;
+}
+
+const { variant = 'default', class: className = '' } = Astro.props;
+---
+
+<span class:list={[variant === 'accent' ? 'tag-accent' : 'tag', className]}>
+  <slot />
+</span>

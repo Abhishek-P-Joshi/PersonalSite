@@ -1,0 +1,20 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Button from '../components/Button.astro';
+---
+
+<Layout title="404 — Page not found">
+  <section class="section flex items-center justify-center min-h-[70vh]">
+    <div class="text-center px-4">
+      <p class="text-8xl md:text-9xl font-bold mb-4 leading-none tracking-tighter"
+         style="color: var(--bg-elevated); font-family: 'Bricolage Grotesque', sans-serif;">
+        404
+      </p>
+      <h1 class="text-2xl md:text-3xl font-bold mb-3">Page not found</h1>
+      <p class="text-base mb-8 max-w-xs mx-auto" style="color: var(--text-muted);">
+        That page doesn't exist. Maybe it moved, or maybe it never did.
+      </p>
+      <Button href="/" variant="primary">Go home</Button>
+    </div>
+  </section>
+</Layout>
