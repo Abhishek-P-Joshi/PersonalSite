@@ -1,0 +1,173 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Tag from '../components/Tag.astro';
+import Button from '../components/Button.astro';
+
+const projects = [
+  {
+    title: 'MoneyMath',
+    year: '2024',
+    role: 'Solo · Full-stack',
+    description: 'A personal finance tools platform built from scratch, currently featuring a retirement calculator with more tools under active development. Owns the full stack end-to-end — React and TypeScript on the frontend, Supabase for auth and data storage, Resend for transactional emails, deployed on Vercel.',
+    tags: ['React', 'TypeScript', 'Supabase', 'Resend', 'Vercel'],
+    href: 'https://moneymath.ajtech.dev',
+    external: true,
+    accent: '#059669',
+    accentBg: 'rgba(5,150,105,0.08)',
+    featured: true,
+    links: [
+      { label: 'Live app', href: 'https://moneymath.ajtech.dev', external: true },
+    ],
+  },
+  {
+    title: 'Word Solitaire',
+    year: '2024',
+    role: 'Solo · Frontend',
+    description: 'A browser-based word association solitaire game built entirely in React and TypeScript with no backend — all game state, logic, and UI handled on the frontend. Demonstrates product thinking and the ability to independently ship a polished, interactive user experience.',
+    tags: ['React', 'TypeScript', 'Vercel'],
+    href: 'https://wordsolitaire.ajtech.dev',
+    external: true,
+    accent: '#7C3AED',
+    accentBg: 'rgba(124,58,237,0.08)',
+    featured: true,
+    links: [
+      { label: 'Live app', href: 'https://wordsolitaire.ajtech.dev', external: true },
+    ],
+  },
+  {
+    title: 'SafeFly',
+    year: '2021–2026',
+    role: 'Software Engineer 2 · Microsoft',
+    description: 'An internal change management approval tool serving 5,000+ daily active users and processing ~500 approval requests per day. Led full migration to the production Azure tenant and designed Infrastructure as Code using Bicep.',
+    tags: ['Azure', 'Bicep', 'CI/CD', 'TypeScript'],
+    href: '#',
+    external: false,
+    accent: '#0284C7',
+    accentBg: 'rgba(2,132,199,0.08)',
+    featured: false,
+    links: [],
+  },
+  {
+    title: 'Code Coverage Analytics',
+    year: '2021–2026',
+    role: 'Software Engineer 2 · Microsoft',
+    description: 'End-to-end data pipeline and Power BI dashboard for the Azure Core org, surfacing test coverage insights across 100+ repositories to engineering leadership and PMs. Includes an automated email outreach system saving 10+ hours of manual work per week.',
+    tags: ['Python', 'KQL', 'Power BI', 'Azure DevOps'],
+    href: '#',
+    external: false,
+    accent: '#D97706',
+    accentBg: 'rgba(217,119,6,0.08)',
+    featured: false,
+    links: [],
+  },
+];
+
+const featured = projects.filter((p) => p.featured);
+const others   = projects.filter((p) => !p.featured);
+---
+
+<Layout title="Work — Abhishek Joshi" description="Selected projects and open-source work.">
+  <section class="section pt-20 md:pt-28">
+    <div class="container-wide">
+      <!-- Header -->
+      <div class="mb-16 reveal" style="margin-bottom:1rem">
+        <p class="section-label">Portfolio</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          Things I've shipped
+        </h1>
+        <p class="text-lg max-w-xl" style="color: var(--text-muted);">
+          A mix of side projects and professional work — each one built with full ownership from design to deployment.
+        </p>
+      </div>
+
+      <!-- Featured projects (large cards) -->
+      <div class="flex flex-col gap-5 mb-12">
+        {featured.map((project, i) => (
+          <div class="card p-7 md:p-9 reveal" style={`animation-delay:${i*0.08}s; padding:1rem;`}>
+            <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-10">
+              <!-- Color block -->
+              <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl shrink-0 flex items-center justify-center"
+                   style={`background-color: ${project.accentBg};`}>
+                <div class="w-5 h-5 rounded-full" style={`background-color: ${project.accent};`}></div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <!-- Title row -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                  <h2 class="text-2xl font-bold">{project.title}</h2>
+                  <span class="tag text-xs">{project.year}</span>
+                </div>
+                <p class="text-xs font-medium mb-3" style="color: var(--text-muted);">{project.role}</p>
+                <p class="text-base leading-relaxed mb-5" style="color: var(--text-muted); margin-bottom:0.5rem;">
+                  {project.description}
+                </p>
+
+                <!-- Tags -->
+                <div class="flex flex-wrap gap-2 mb-6" style="margin-bottom:0.75rem;">
+                  {project.tags.map((tag) => (
+                    <span class="tag text-xs">{tag}</span>
+                  ))}
+                </div>
+
+                <!-- Links -->
+                {project.links.length > 0 && (
+                  <div class="flex flex-wrap gap-2">
+                    {project.links.map((link, j) => (
+                      <Button
+                        href={link.href}
+                        variant={j === 0 ? 'secondary' : 'ghost'}
+                        external={link.external}
+                      >
+                        {link.label}
+                        {link.external && (
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="7" y1="17" x2="17" y2="7"/>
+                            <polyline points="7 7 17 7 17 17"/>
+                          </svg>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Other projects (smaller grid) -->
+      {others.length > 0 && (
+        <>
+          <h2 class="text-sm font-semibold uppercase tracking-widest mb-5 reveal"
+              style="color: var(--text-faint); padding-top:2rem; padding-bottom:2rem;">
+            Other work
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 reveal">
+            {others.map((project) => (
+              <div class="card p-6" style="padding:1rem;">
+                <div class="flex items-start gap-4 mb-4">
+                  <div class="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center"
+                       style={`background-color: ${project.accentBg};`}>
+                    <div class="w-3 h-3 rounded-full" style={`background-color: ${project.accent};`}></div>
+                  </div>
+                  <div>
+                    <h3 class="font-bold mb-0.5">{project.title}</h3>
+                    <p class="text-xs" style="color: var(--text-faint);">{project.year} · {project.role}</p>
+                  </div>
+                </div>
+                <p class="text-sm leading-relaxed mb-4" style="color: var(--text-muted); margin-bottom:0.5rem;">
+                  {project.description}
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  {project.tags.slice(0,3).map((tag) => (
+                    <span class="tag text-xs">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  </section>
+</Layout>

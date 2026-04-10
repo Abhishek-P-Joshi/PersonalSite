@@ -1,0 +1,196 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const post = {
+  title: 'Building MoneyMath: A Journey into Phased Retirement Planning',
+  date: 'April 5, 2026',
+  readTime: '8 min',
+  tags: ['React', 'TypeScript', 'Supabase', 'Product'],
+  excerpt: 'Most retirement calculators assume you spend the same amount every year until you die. I built MoneyMath to model how retirement actually works — in phases.',
+};
+---
+
+<Layout title={`${post.title} — Abhishek Joshi`} description={post.excerpt}>
+  <article class="section pt-16 md:pt-24">
+
+    <!-- Back link -->
+    <div class="container-content mb-12">
+      <a href="/blog"
+         class="inline-flex items-center gap-2 text-sm transition-colors duration-150 group"
+         style="color: var(--text-muted);"
+         onmouseover="this.style.color='var(--text)'"
+         onmouseout="this.style.color='var(--text-muted)'">
+        <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-150"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        All posts
+      </a>
+    </div>
+
+    <!-- Header -->
+    <header class="container-content mb-12">
+      <div class="flex flex-wrap gap-2 mb-6">
+        {post.tags.map((tag) => (
+          <span class="tag text-xs">{tag}</span>
+        ))}
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">{post.title}</h1>
+      <div class="flex items-center gap-4 pb-8 border-b" style="border-color: var(--border);">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+             style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+          AJ
+        </div>
+        <div>
+          <p class="text-sm font-medium">Abhishek Joshi</p>
+          <p class="text-xs" style="color: var(--text-muted);">{post.date} · {post.readTime} read</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <div class="container-content prose-custom">
+
+      <p>
+        Retirement planning is often treated as a simple math problem: save $X, withdraw Y% every year, and hope
+        it lasts. But when I started thinking seriously about my own financial future, that framing felt off.
+        Real life isn't linear — our needs, energy levels, and spending habits change significantly as we age.
+        That realization is what led me to build <strong>MoneyMath</strong>.
+      </p>
+
+      <h2>Why I built it</h2>
+      <p>
+        The primary motivation was to move beyond the "one-size-fits-all" retirement calculator. Most tools I tried
+        assumed I'd spend the same inflation-adjusted amount from the day I retire until the day I die. But
+        retirement typically follows three distinct phases, and I wanted a tool that actually modeled them:
+      </p>
+      <ul>
+        <li><strong>The Go-Go Years:</strong> Early retirement — travel, hobbies, higher activity and spending.</li>
+        <li><strong>The Slow-Go Years:</strong> A natural tapering of activity and discretionary expenses.</li>
+        <li><strong>The No-Go Years:</strong> Later life, where spending shifts from lifestyle to healthcare and support.</li>
+      </ul>
+      <p>
+        So I built <strong>PhaseWise</strong>, MoneyMath's flagship tool, specifically to model these transitions.
+        The goal was a more honest picture of what my financial future actually looks like — not just a single
+        line on a graph.
+      </p>
+
+      <h2>The technical foundation</h2>
+      <p>
+        I built MoneyMath as a modern full-stack web application with a focus on performance, type safety, and
+        user experience. Here's what's under the hood:
+      </p>
+      <ul>
+        <li><strong>Frontend:</strong> React with TypeScript for a robust, component-based UI</li>
+        <li><strong>Build tool:</strong> Vite for fast development and optimized production builds</li>
+        <li><strong>Styling:</strong> Tailwind CSS for a clean, responsive design</li>
+        <li><strong>Data visualization:</strong> Recharts to turn complex financial data into interactive charts</li>
+        <li><strong>Backend &amp; auth:</strong> Supabase for secure user authentication and cloud data persistence</li>
+        <li><strong>AI integration:</strong> Google Gemini API for personalized financial insights via an "AI Advisor"</li>
+        <li><strong>Reporting:</strong> jsPDF and html2canvas for generating downloadable PDF financial reports</li>
+      </ul>
+
+      <h2>Architecture and how the pieces fit together</h2>
+      <p>
+        I wanted a clean separation between the UI and the financial logic, so I structured the app around a few
+        key components:
+      </p>
+
+      <h3>1. The calculation engine (<code>calculationService.ts</code>)</h3>
+      <p>
+        This is the heart of the app. It handles compound interest, inflation adjustment to maintain purchasing
+        power across decades, phase-based decumulation that dynamically switches withdrawal rates as you move
+        through retirement phases, and solvency analysis — determining exactly when a portfolio might be depleted
+        and calculating the shortfall or surplus. Everything else in the app is downstream of this.
+      </p>
+
+      <h3>2. Dynamic phase management (<code>PhaseManager.tsx</code>)</h3>
+      <p>
+        The UI lets users add, remove, and edit retirement phases on the fly. Each phase captures a name, an age
+        range, and a monthly spending target. I built in real-time validation to ensure there are no gaps in the
+        retirement timeline — a detail that matters a lot when you're modeling decades of your life.
+      </p>
+
+      <h3>3. The dashboard (<code>DashboardPage.tsx</code>)</h3>
+      <p>
+        The dashboard acts as the command center. It aggregates inputs from the user, passes them to the
+        calculation engine, and distributes results to three places:
+      </p>
+      <ul>
+        <li><strong>Visualization:</strong> Interactive area and bar charts showing portfolio balance over time and withdrawal structures by phase</li>
+        <li><strong>Withdrawal table:</strong> A year-by-year breakdown of the portfolio's health</li>
+        <li><strong>AI Advisor:</strong> A component that sends the structured results to the Gemini API to generate personalized strategic advice</li>
+      </ul>
+
+      <h3>4. Secure persistence (<code>AuthContext.tsx</code>)</h3>
+      <p>
+        By integrating Supabase, I let users save their complex scenarios securely in the cloud. The
+        <code>AuthContext</code> manages session state throughout the app, ensuring data is only accessible to
+        the rightful owner. The core calculator works without an account — sign-up is only required if you want
+        to save your scenarios.
+      </p>
+
+      <h2>What I learned</h2>
+      <p>
+        A few things stood out during this build. Defining strict TypeScript interfaces for
+        <code>FinancialInputs</code>, <code>RetirementPhase</code>, and <code>CalculationResult</code> upfront
+        saved me from a whole class of bugs that would have been very hard to track down inside complex math
+        operations. When you're compounding numbers across 30-year time horizons, a type mismatch can produce
+        results that look plausible but are completely wrong.
+      </p>
+      <p>
+        I also found that integrating an AI layer isn't as complex as it sounds when you already have
+        well-structured output from a calculation engine. Passing a clean <code>CalculationResult</code> object
+        to the Gemini API and asking it to comment on the user's financial position produced surprisingly
+        useful and contextually accurate advice.
+      </p>
+      <p>
+        Finally, building something I'd actually use myself made every design decision feel more concrete.
+        When you're your own first user, there's no ambiguity about what "good" means.
+      </p>
+
+      <blockquote>
+        The best financial tools don't give you answers — they help you ask better questions.
+      </blockquote>
+
+      <h2>What's next</h2>
+      <p>
+        MoneyMath is still actively evolving. The retirement calculator is the first tool, but the vision is a
+        broader personal finance platform — covering savings rate analysis, debt payoff modeling, and scenario
+        comparison. If there's a tool you'd find useful, I'd genuinely love to hear about it.
+      </p>
+
+      <hr />
+
+      <p>
+        You can try MoneyMath at <a href="https://moneymath.ajtech.dev">moneymath.ajtech.dev</a>. It's free
+        to use and doesn't require an account for the core calculator.
+      </p>
+
+    </div>
+
+    <!-- Post footer -->
+    <footer class="container-content mt-16 pt-10 border-t" style="border-color: var(--border);">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+               style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+            AJ
+          </div>
+          <div>
+            <p class="text-sm font-semibold">Abhishek Joshi</p>
+            <a href="https://linkedin.com/in/abhishek-joshi-5619a676" target="_blank" rel="noopener"
+               class="text-xs transition-colors" style="color: var(--accent);">
+              LinkedIn
+            </a>
+          </div>
+        </div>
+        <a href="/blog" class="btn btn-secondary text-sm" style="text-decoration: none;">
+          ← Back to writing
+        </a>
+      </div>
+    </footer>
+
+  </article>
+</Layout>

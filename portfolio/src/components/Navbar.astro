@@ -1,0 +1,185 @@
+---
+const pathname = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+const links = [
+  { href: '/',        label: 'Home'    },
+  { href: '/work',    label: 'Work'    },
+  { href: '/blog',    label: 'Writing' },
+  { href: '/about',   label: 'About'   },
+];
+---
+
+<header id="navbar"
+  class="fixed top-0 inset-x-0 z-50 transition-all duration-300"
+  style="background-color: var(--bg);"
+>
+  <!-- Glass backdrop effect -->
+  <div class="absolute inset-0 backdrop-blur-xl" style="background-color: color-mix(in srgb, var(--bg) 80%, transparent);"></div>
+
+  <!-- Border bottom -->
+  <div class="absolute bottom-0 inset-x-0 h-px" style="background-color: var(--border);"></div>
+
+  <div class="container-wide relative">
+    <div class="flex items-center justify-between h-14">
+      <!-- Logo / wordmark -->
+      <a href="/" class="group flex items-center gap-2.5 shrink-0" aria-label="Home">
+        <div class="relative w-7 h-7 flex items-center justify-center rounded-lg overflow-hidden"
+             style="background-color: var(--text);">
+          <span class="text-sm font-bold" style="font-family: 'Bricolage Grotesque', sans-serif; color: var(--bg);">AJ</span>
+          <!-- Amber dot -->
+          <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full"
+                style="background-color: #D97706;"></span>
+        </div>
+        <span class="font-semibold text-sm tracking-tight hidden sm:inline"
+              style="font-family: 'Bricolage Grotesque', sans-serif;">
+          Abhishek Joshi
+        </span>
+      </a>
+
+      <!-- Nav links (desktop) -->
+      <nav class="hidden md:flex items-center gap-5" aria-label="Main navigation">
+        {links.map(({ href, label }) => (
+          <a
+            href={href}
+            class:list={['nav-link px-3 py-1.5 rounded-md', { active: isActive(href) }]}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+
+      <!-- Right actions -->
+      <div class="flex items-center gap-2">
+        <!-- Availability badge -->
+        <a href="mailto:hello@ajtech.dev"
+           class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 hover:shadow-sm"
+           style="background-color: var(--accent-bg); border-color: transparent; color: var(--accent-dark);">
+          <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+          Available for work
+        </a>
+
+        <!-- Dark mode toggle -->
+        <button
+          id="theme-toggle"
+          class="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105"
+          style="background-color: var(--bg-soft); color: var(--text-muted);"
+          aria-label="Toggle dark mode"
+        >
+          <!-- Sun icon (shown in dark mode) -->
+          <svg id="icon-sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg id="icon-moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <!-- Mobile menu toggle -->
+        <button
+          id="menu-toggle"
+          class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+          style="background-color: var(--bg-soft); color: var(--text);"
+          aria-label="Toggle menu"
+          aria-expanded="false"
+        >
+          <svg id="menu-icon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          <svg id="close-icon" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div
+    id="mobile-menu"
+    class="hidden md:hidden relative border-t"
+    style="background-color: var(--bg); border-color: var(--border);"
+  >
+    <nav class="container-wide py-4 flex flex-col gap-1" aria-label="Mobile navigation">
+      {links.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[
+            'px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            isActive(href)
+              ? 'bg-[var(--bg-elevated)] text-[var(--text)]'
+              : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-soft)]'
+          ]}
+        >
+          {label}
+        </a>
+      ))}
+      <div class="h-px my-2" style="background-color: var(--border);"></div>
+      <a
+        href="mailto:hello@ajtech.dev"
+        class="px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+        style="color: var(--accent);"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+        Available for work
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- Spacer to offset fixed nav -->
+<div class="h-14"></div>
+
+<script>
+  // ── Theme toggle ──────────────────────────────────────
+  const toggle = document.getElementById('theme-toggle')!;
+  const root   = document.documentElement;
+  const sunIcon  = document.getElementById('icon-sun')!;
+  const moonIcon = document.getElementById('icon-moon')!;
+
+  function applyTheme(dark: boolean) {
+    root.classList.toggle('dark', dark);
+    sunIcon.classList.toggle('hidden', !dark);
+    moonIcon.classList.toggle('hidden', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }
+
+  // Init icon state
+  applyTheme(root.classList.contains('dark'));
+
+  toggle.addEventListener('click', () => {
+    applyTheme(!root.classList.contains('dark'));
+  });
+
+  // ── Navbar scroll shadow ──────────────────────────────
+  const navbar = document.getElementById('navbar')!;
+  window.addEventListener('scroll', () => {
+    navbar.style.boxShadow = window.scrollY > 8 ? 'var(--shadow-sm)' : 'none';
+  }, { passive: true });
+
+  // ── Mobile menu ───────────────────────────────────────
+  const menuBtn   = document.getElementById('menu-toggle')!;
+  const mobileNav = document.getElementById('mobile-menu')!;
+  const menuIcon  = document.getElementById('menu-icon')!;
+  const closeIcon = document.getElementById('close-icon')!;
+
+  menuBtn.addEventListener('click', () => {
+    const open = mobileNav.classList.toggle('hidden');
+    menuBtn.setAttribute('aria-expanded', String(!open));
+    menuIcon.classList.toggle('hidden', !open);
+    closeIcon.classList.toggle('hidden', open);
+  });
+</script>

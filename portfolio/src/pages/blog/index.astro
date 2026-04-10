@@ -1,0 +1,79 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Tag from '../../components/Tag.astro';
+
+// In a real project, use Astro's content collections
+const posts = [
+  {
+    title: 'Building MoneyMath: A Journey into Phased Retirement Planning',
+    excerpt: 'Most retirement calculators assume you spend the same amount every year until you die. I built MoneyMath to model how retirement actually works — in phases.',
+    date: 'Apr 5, 2026',
+    slug: 'building-moneymath',
+    readTime: '8 min',
+    tags: ['React', 'TypeScript', 'Supabase', 'Product'],
+  },
+];
+---
+
+<Layout title="Writing — Abhishek Joshi" description="Articles on software engineering, web development, and engineering culture.">
+  <section class="section pt-20 md:pt-28">
+    <div class="container-wide">
+      <!-- Header -->
+      <div class="mb-16 reveal">
+        <p class="section-label">Writing</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          Notes from the<br />trenches
+        </h1>
+        <p class="text-lg max-w-xl" style="color: var(--text-muted);">
+          Long-form thoughts on software engineering, developer experience,
+          and building products people love.
+        </p>
+      </div>
+
+      <!-- Post list -->
+      <div class="flex flex-col reveal">
+        {posts.map((post, i) => (
+          <a
+            href={`/blog/${post.slug}`}
+            class="group grid grid-cols-1 md:grid-cols-[1fr,2.5fr,auto] gap-4 md:gap-10 py-7 border-b
+                   first:pt-0 last:border-b-0 -mx-4 px-4 rounded-lg transition-all duration-200 hover:bg-[var(--bg-soft)]"
+            style={`border-color: var(--border-mid); animation-delay:${i*0.05}s;`}
+          >
+            <!-- Meta column -->
+            <div class="flex flex-row md:flex-col md:items-start gap-3 md:gap-2">
+              <span class="text-sm font-medium tabular-nums" style="color: var(--text-faint);">
+                {post.date}
+              </span>
+              <span class="text-xs hidden md:block" style="color: var(--text-faint);">{post.readTime} read</span>
+              <div class="flex flex-wrap gap-1.5 md:mt-2 pb-1">
+                {post.tags.slice(0, 2).map((tag) => (
+                  <span class="tag text-xs">{tag}</span>
+                ))}
+              </div>
+            </div>
+
+            <!-- Content column -->
+            <div>
+              <h2 class="text-xl font-bold mb-2 leading-snug group-hover:text-[var(--accent)] transition-colors duration-200">
+                {post.title}
+              </h2>
+              <p class="text-sm leading-relaxed" style="color: var(--text-muted);">
+                {post.excerpt}
+              </p>
+            </div>
+
+            <!-- Arrow column -->
+            <div class="hidden md:flex items-center opacity-0 group-hover:opacity-100
+                        -translate-x-2 group-hover:translate-x-0 transition-all duration-200"
+                 style="color: var(--accent);">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
