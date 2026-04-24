@@ -1,0 +1,342 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const post = {
+  title: 'Building PKB MCP: Turning My Digital Chaos into a Queryable Brain',
+  date: 'April 17, 2026',
+  readTime: '14 min',
+  tags: ['Python', 'MCP', 'SQLite', 'AI', 'Architecture'],
+  excerpt: 'I had 1,400+ saved YouTube videos, an Obsidian vault full of notes, and no good way to find any of it. So I built a locally-hosted MCP server that connects it all to Claude Desktop — and the design decisions along the way were more interesting than I expected.',
+};
+---
+
+<Layout title={`${post.title} — Abhishek Joshi`} description={post.excerpt}>
+  <article class="section pt-16 md:pt-24">
+
+    <!-- Back link -->
+    <div class="container-content mb-12">
+      <a href="/blog"
+         class="inline-flex items-center gap-2 text-sm transition-colors duration-150 group"
+         style="color: var(--text-muted);"
+         onmouseover="this.style.color='var(--text)'"
+         onmouseout="this.style.color='var(--text-muted)'">
+        <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-150"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        All posts
+      </a>
+    </div>
+
+    <!-- Header -->
+    <header class="container-content mb-12">
+      <div class="flex flex-wrap gap-2 mb-6">
+        {post.tags.map((tag) => (
+          <span class="tag text-xs">{tag}</span>
+        ))}
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">{post.title}</h1>
+      <div class="flex items-center gap-4 pb-8 border-b" style="border-color: var(--border);">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+             style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+          AJ
+        </div>
+        <div>
+          <p class="text-sm font-medium">Abhishek Joshi</p>
+          <p class="text-xs" style="color: var(--text-muted);">{post.date} · {post.readTime} read</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <div class="container-content prose-custom">
+
+      <p>
+        I've had a bad habit for years: I save things I'll never find again. YouTube videos I fully intend to
+        watch. Markdown notes half-finished in Obsidian. Bookmarks dumped into a folder called "read later" that
+        functions more as a black hole. One day I searched my own Obsidian vault for something I was sure I'd
+        written and found nothing — then found the note two weeks later by accident. That was the moment I
+        decided to actually fix it.
+      </p>
+      <p>
+        The result is <strong>PKB MCP</strong> — a locally-hosted
+        <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener noreferrer">Model Context Protocol</a>
+        server that ingests my notes, bookmarks, and YouTube watch history, stores them in a searchable
+        local database, and connects to Claude Desktop so I can query my own knowledge base in plain English.
+        It currently has 1,430+ YouTube videos ingested, my Obsidian vault connected, and 10 MCP tools live.
+      </p>
+      <p>
+        This post is about the design decisions that shaped it — the things I chose deliberately, the things I
+        tried and discarded, and the tradeoffs I'd make differently if I started over.
+      </p>
+
+      <h2>Why MCP, and why local?</h2>
+      <p>
+        The <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener noreferrer">Model Context Protocol</a>
+        is Anthropic's open standard for connecting AI models to external tools and data sources. It gives
+        Claude a structured way to call functions — search my knowledge base, sync a YouTube playlist, answer
+        a question with citations — rather than stuffing a huge context window with raw text.
+      </p>
+      <p>
+        Running it locally was a deliberate constraint. My Obsidian vault has health logs, financial planning
+        notes, and journal entries. I wasn't going to pipe that through a third-party cloud service. Local-first
+        also means no latency on the retrieval side — only the final <code>answer_question</code> call touches
+        the Anthropic API, and even that is swappable with a local Ollama model in a future phase for fully
+        air-gapped operation on sensitive sources.
+      </p>
+      <p>
+        The tradeoff is that "local" means the embedding model, vector store, FTS index, and file watcher all
+        run on my Mac. On an M-series chip this is completely fine — the 90MB
+        <code>all-MiniLM-L6-v2</code> model loads in under two seconds and inference is fast. But it's a
+        real constraint if you wanted to run this on a headless server or share it across devices. I stubbed
+        <code>NOTE[remote]</code> swap points throughout the codebase to make a future HTTP deployment a
+        configuration change, not a rewrite.
+      </p>
+
+      <h2>The storage decision: SQLite + ChromaDB</h2>
+      <p>
+        Most vector search projects jump straight to a vector database and treat it as the source of truth.
+        I didn't, and this was one of the most important early decisions.
+      </p>
+      <p>
+        Vector search is great at semantic similarity — finding concepts, meanings, and topics. It's terrible
+        at structured filtering. If you want "Kurzgesagt videos shorter than 15 minutes uploaded in 2023,"
+        you don't want to embed that query and run cosine similarity against 1,400 video descriptions. You want
+        a SQL <code>WHERE</code> clause with <code>channel LIKE '%Kurzgesagt%' AND duration_seconds &lt;= 900
+        AND uploaded_at &gt;= '2023-01-01'</code>. That's what SQLite is built for.
+      </p>
+      <p>
+        So the architecture uses two stores with clear, non-overlapping responsibilities:
+      </p>
+      <ul>
+        <li><strong>SQLite with FTS5</strong> — the system of record. All 22 columns of metadata per note: channel, duration, view count, upload date, language, categories, soft-delete status. FTS5 provides BM25-ranked keyword search over the full text. This is where structured browse queries and exact lookups live.</li>
+        <li><strong>ChromaDB</strong> — the semantic layer. Stores 384-dimensional embeddings per chunk with a pointer back to the SQLite note ID. Handles meaning-based retrieval only.</li>
+      </ul>
+      <p>
+        The key insight: ChromaDB is a cache of embeddings, not the canonical store. If it gets corrupted or
+        I want to rebuild it, I can re-embed from the <code>raw_text</code> preserved in SQLite. This also
+        makes soft delete and restore possible — when a note is soft-deleted, its ChromaDB chunks are removed
+        immediately, but the raw text lives on in SQLite. Restoring re-embeds from that preserved text.
+      </p>
+      <p>
+        One non-obvious gotcha: SQLite's FTS5 doesn't automatically clean up its inverted index when you
+        hard-delete a row. Without a custom <code>AFTER DELETE</code> trigger, FTS5 retains stale references
+        that cause "missing row" errors on subsequent queries. I learned this the painful way and added three
+        triggers: <code>notes_ai</code>, <code>notes_au</code>, and <code>notes_ad</code> to keep the FTS
+        index perfectly in sync with the main table.
+      </p>
+
+      <h2>Hybrid search and why pure vector search wasn't enough</h2>
+      <p>
+        Early on I tried running purely semantic vector search. It felt magical for vague, concept-driven
+        queries — "space exploration videos" would surface relevant results I'd never have found with keywords.
+        But it had a blind spot that revealed itself quickly: exact lookups.
+      </p>
+      <p>
+        If I search for a specific YouTube URL, a video ID, or a channel name like "3Blue1Brown," vector
+        search produces mediocre results. The embedding for "3Blue1Brown" doesn't cluster neatly near the
+        embeddings of videos by 3Blue1Brown — proper nouns are notorious for this. Keyword search, on the
+        other hand, handles this trivially.
+      </p>
+      <p>
+        The solution is hybrid search with <strong>Reciprocal Rank Fusion (RRF)</strong>. Both FTS5 and
+        ChromaDB return ranked result lists independently, and RRF merges them using:
+      </p>
+      <pre><code>score = 1 / (60 + rank_fts + 1) + 1 / (60 + rank_vector + 1)</code></pre>
+      <p>
+        Notes that appear in both lists score highest. Notes that appear in only one list still surface if
+        they scored well there. The constant 60 is the standard RRF smoothing factor — it prevents
+        top-ranked results from dominating so completely that lower-ranked items from the other list are
+        ignored. The result is a merged ranking that's better than either system alone.
+      </p>
+      <p>
+        The tradeoff is latency: every hybrid query runs two lookups in parallel. In practice this is
+        imperceptible locally, but it's worth knowing that <code>fts_only=true</code> is available on
+        <code>search_knowledge</code> when you need the speed of a pure keyword lookup.
+      </p>
+
+      <h2>The YouTube Watch Later problem</h2>
+      <p>
+        This was the most annoying technical constraint in the whole project, and it forced an architecture I
+        wouldn't have chosen otherwise.
+      </p>
+      <p>
+        Google intentionally blocks the Watch Later playlist (<code>WL</code>) from the YouTube Data API. If
+        you call <code>playlistItems.list</code> with <code>playlistId=WL</code> using valid OAuth2
+        credentials, you get zero results. It's not a bug — it's documented. Watch Later is treated as
+        private infrastructure, not a queryable resource.
+      </p>
+      <p>
+        The workaround is a hybrid approach:
+      </p>
+      <ul>
+        <li><strong>yt-dlp</strong> fetches the Watch Later video IDs using <code>extract_flat=True</code> — a single shallow page request using Chrome cookies, not per-video scraping. This gives me the ID list fast.</li>
+        <li><strong>YouTube Data API v3</strong> then fetches full metadata for each ID via <code>videos.list</code>: title, channel, description, duration, view count, upload date, categories, language, thumbnail.</li>
+      </ul>
+      <p>
+        Custom playlists use the API exclusively — no browser cookies needed. The hybrid is only required for
+        Watch Later. I don't love the cookie dependency for that path, but the alternative was either no Watch
+        Later support or scraping full page HTML, which is far more fragile.
+      </p>
+      <p>
+        The API free quota is 10,000 units/day, with <code>videos.list</code> costing 1 unit per video. My
+        1,430-video initial sync consumed 14% of the daily quota. Incremental syncs are cheap — the delta
+        reconciliation skips videos that are already fully enriched in the database.
+      </p>
+
+      <h2>Delta reconciliation: keeping the KB honest</h2>
+      <p>
+        Syncing data in is easy. Knowing when data should be <em>removed</em> is harder.
+      </p>
+      <p>
+        If I remove a video from my Watch Later playlist, or delete a note from my Obsidian vault, I want
+        that reflected in the knowledge base on the next sync. Without this, the KB slowly drifts from
+        reality — accumulating ghost entries for things I've deliberately removed.
+      </p>
+      <p>
+        The reconciliation logic is a set-difference operation:
+      </p>
+      <pre><code>existing_ids = list_ids_by_source(source_name)   # active notes in DB
+current_ids  = &#123;note_id for each item in current playlist/vault&#125;
+removed      = existing_ids - current_ids
+→ soft_delete each removed ID</code></pre>
+      <p>
+        This runs at the end of every sync. The <code>deleted_from</code> column records the cause:
+        <code>playlist_removed</code> for YouTube, <code>file_deleted</code> for Obsidian, <code>user</code>
+        for manual deletions. That audit trail has been genuinely useful — I've recovered notes I thought I
+        wanted gone.
+      </p>
+
+      <h2>Two-tier deletion: the case for soft delete</h2>
+      <p>
+        I built two distinct deletion modes, and the distinction matters more than it first seems.
+      </p>
+      <p>
+        <strong>Soft delete</strong> marks a note as inactive (<code>status='deleted'</code>), removes its
+        chunks from ChromaDB immediately so it stops appearing in search results, but preserves the full
+        <code>raw_text</code> in SQLite. Every read query includes <code>AND status='active'</code>, so soft-
+        deleted notes are invisible to all normal operations. But they're recoverable — <code>restore_item</code>
+        re-embeds from the preserved raw text and brings the note back fully.
+      </p>
+      <p>
+        <strong>Hard delete</strong> permanently removes the row from SQLite and its chunks from ChromaDB.
+        I added a safeguard: <code>get_by_id_any_status()</code> allows hard-deleting a note that's already
+        soft-deleted, without requiring a restore step first. This matters because otherwise you'd have to
+        restore a note before you could permanently remove it, which is exactly backwards from intuitive
+        behavior.
+      </p>
+      <p>
+        The tradeoff is storage. Soft-deleted notes accumulate over time — sync removals can build up quickly
+        if you're regularly cycling content. A periodic purge step (<code>make purge-deleted</code>) hard-
+        deletes rows soft-deleted more than 90 days ago, giving a configurable grace period before permanent
+        loss.
+      </p>
+
+      <h2>Choosing the embedding model</h2>
+      <p>
+        I went with <code>all-MiniLM-L6-v2</code> from sentence-transformers. At ~90MB and 384 dimensions,
+        it's not the most powerful embedding model available — but it was the right choice for this use case
+        for three reasons.
+      </p>
+      <p>
+        First, it runs fast on CPU. An M-series Mac handles real-time ingestion without perceptible lag. A
+        larger model like <code>all-mpnet-base-v2</code> would produce better embeddings but takes 3-4x
+        longer per batch — a meaningful difference when you're ingesting 1,400 videos in a single session.
+      </p>
+      <p>
+        Second, 384 dimensions is more than sufficient for the retrieval task here. The queries are natural
+        language questions against a knowledge base of personal notes and video descriptions. We're not doing
+        cross-lingual retrieval or code search — the semantic complexity is moderate and the model handles
+        it well.
+      </p>
+      <p>
+        Third, it's entirely local. No API key, no usage cost, no data leaving the machine. For a personal
+        knowledge base this matters both for privacy and for cost.
+      </p>
+
+      <h2>The test suite: why the fixture design matters</h2>
+      <p>
+        The test architecture has one decision I'm particularly proud of: the <code>shared_embedder</code>
+        fixture is session-scoped.
+      </p>
+      <p>
+        <code>all-MiniLM-L6-v2</code> takes about 2 seconds to load. With 8 integration tests, each creating
+        their own embedder instance, that's 16 seconds just in model loading — before any actual test logic
+        runs. Session-scoped fixtures in pytest load once per run and share the instance across all tests.
+        The integration suite runs in ~5 seconds total.
+      </p>
+      <p>
+        Integration tests use a <code>mock_embedder</code> that returns deterministic fake 384-dim vectors
+        instantly. This means the pipeline logic — deduplication, storage routing, classification, metadata
+        handling — is tested correctly without any neural network inference. Real embedding quality is
+        validated by the smoke tests against the live server, which are the only tests that touch actual
+        embeddings.
+      </p>
+      <p>
+        The three-layer strategy (unit → integration → smoke) maps cleanly to the three things I care about:
+        individual function correctness, full pipeline correctness with real storage, and end-to-end tool
+        behavior against the live MCP server. Running <code>make test</code> after every change gives fast
+        feedback without touching the production database.
+      </p>
+
+      <h2>What I'd do differently</h2>
+      <p>
+        A few things I'd reconsider with fresh eyes:
+      </p>
+      <ul>
+        <li><strong>Obsidian vault sync via API, not file watching.</strong> The current approach watches the vault folder with <code>watchdog</code> and re-ingests on every save. It works, but Obsidian's own plugin ecosystem has a proper API surface. A dedicated plugin that pushes change events would be more reliable and wouldn't require the vault path to be on the local filesystem.</li>
+        <li><strong>Chunk IDs should be content-addressed.</strong> Currently chunks are keyed as <code>&#123;note_id&#125;_chunk_&#123;index&#125;</code>. If a note is updated and re-chunked, old chunk IDs need to be explicitly deleted and new ones inserted. Content-addressed IDs (based on a hash of the chunk text) would make upserts idempotent and eliminate the delete-then-reinsert cycle.</li>
+        <li><strong>The YouTube quota constraint is real.</strong> 10,000 API units/day sounds like a lot until you realize a large initial sync can dent it meaningfully. I'd add a rate-limiting layer and queue mechanism earlier, rather than relying on the caller to be careful about when they trigger a full re-sync.</li>
+      </ul>
+
+      <h2>Current state and what's next</h2>
+      <p>
+        The server is in daily use. I query it through Claude Desktop asking things like "what have I saved
+        about distributed systems?" or "find chess videos shorter than 10 minutes" — and it works. Finding
+        something I saved six months ago now takes seconds instead of a resigned shrug.
+      </p>
+      <p>
+        The next phase adds cloud connectors (Apple Notes via AppleScript, OneDrive via Graph API, Gmail)
+        and a local LLM path via Ollama so that sensitive sources like journal entries and health logs never
+        touch an external API at all. The remote deployment path is already fully stubbed — activating it
+        is a config change.
+      </p>
+
+      <blockquote>
+        The best personal tools are the ones you build for the version of yourself that's tired of the problem,
+        not the idealized version that would have been more organized in the first place.
+      </blockquote>
+
+      <p>
+        The full source is on GitHub at
+        <a href="https://github.com/Abhishek-P-Joshi/pkb-mcp" target="_blank" rel="noopener noreferrer">github.com/Abhishek-P-Joshi/pkb-mcp</a>
+        — including the README that covers the architecture, data flows, and setup in full detail.
+      </p>
+
+    </div>
+
+    <!-- Post footer -->
+    <footer class="container-content mt-16 pt-10 border-t" style="border-color: var(--border);">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+               style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+            AJ
+          </div>
+          <div>
+            <p class="text-sm font-semibold">Abhishek Joshi</p>
+            <a href="https://linkedin.com/in/abhishek-joshi-5619a676" target="_blank" rel="noopener"
+               class="text-xs transition-colors" style="color: var(--accent);">
+              LinkedIn
+            </a>
+          </div>
+        </div>
+        <a href="/blog" class="btn btn-secondary text-sm" style="text-decoration: none;">
+          ← Back to writing
+        </a>
+      </div>
+    </footer>
+
+  </article>
+</Layout>

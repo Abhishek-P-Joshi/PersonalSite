@@ -5,8 +5,23 @@ import Button from '../components/Button.astro';
 
 const projects = [
   {
+    title: 'PKB MCP',
+    year: '2026',
+    role: 'Solo · Side Project',
+    description: 'A locally-hosted Model Context Protocol server that turns scattered notes, bookmarks, and YouTube watch history into a searchable, AI-queryable personal knowledge base. Runs entirely on your Mac and connects to Claude Desktop. Features hybrid search combining FTS5 keyword and vector search with Reciprocal Rank Fusion, RAG answers with source citations, real-time file ingestion via a folder watcher, Obsidian vault sync, and YouTube playlist sync via YouTube Data API v3. Currently has 1,430+ YouTube videos ingested, Obsidian vault connected, and 10 MCP tools live.',
+    tags: ['Python', 'MCP', 'SQLite', 'ChromaDB', 'FastAPI', 'sentence-transformers', 'YouTube API', 'yt-dlp', 'Anthropic API'],
+    href: 'https://github.com/Abhishek-P-Joshi/pkb-mcp',
+    external: true,
+    accent: '#0EA5E9',
+    accentBg: 'rgba(14,165,233,0.08)',
+    featured: true,
+    links: [
+      { label: 'GitHub', href: 'https://github.com/Abhishek-P-Joshi/pkb-mcp', external: true },
+    ],
+  },
+  {
     title: 'MoneyMath',
-    year: '2024',
+    year: '2025',
     role: 'Solo · Full-stack',
     description: 'A personal finance tools platform built from scratch, currently featuring a retirement calculator with more tools under active development. Owns the full stack end-to-end — React and TypeScript on the frontend, Supabase for auth and data storage, Resend for transactional emails, deployed on Vercel.',
     tags: ['React', 'TypeScript', 'Supabase', 'Resend', 'Vercel'],
@@ -21,7 +36,7 @@ const projects = [
   },
   {
     title: 'Word Solitaire',
-    year: '2024',
+    year: '2025',
     role: 'Solo · Frontend',
     description: 'A browser-based word association solitaire game built entirely in React and TypeScript with no backend — all game state, logic, and UI handled on the frontend. Demonstrates product thinking and the ability to independently ship a polished, interactive user experience.',
     tags: ['React', 'TypeScript', 'Vercel'],

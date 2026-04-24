@@ -5,28 +5,45 @@ import Button from '../components/Button.astro';
 
 const projects = [
   {
+    title: 'PKB MCP',
+    description: 'A locally-hosted MCP server that turns notes, bookmarks, and YouTube watch history into a searchable, AI-queryable personal knowledge base. Runs entirely on your Mac and connects to Claude Desktop. 1,430+ videos ingested, 10 MCP tools live.',
+    tags: ['Python', 'MCP', 'SQLite', 'ChromaDB', 'FastAPI'],
+    href: 'https://github.com/Abhishek-P-Joshi/pkb-mcp',
+    external: true,
+    year: '2026',
+    accent: '#0EA5E9',
+    accentBg: 'rgba(14,165,233,0.08)',
+  },
+  {
     title: 'MoneyMath',
-    description: 'A personal finance tools platform featuring a retirement calculator, with more tools under active development. Full-stack, end-to-end.',
+    description: 'A personal finance tools platform built from scratch — currently featuring a retirement calculator, with more tools under active development. Full-stack ownership end to end.',
     tags: ['React', 'TypeScript', 'Supabase', 'Vercel'],
     href: 'https://moneymath.ajtech.dev',
     external: true,
-    year: '2024',
-    accent: '#059669',
-    accentBg: 'rgba(5,150,105,0.08)',
+    year: '2025',
+    accent: '#D97706',
+    accentBg: 'rgba(217,119,6,0.08)',
   },
   {
     title: 'Word Solitaire',
-    description: 'A browser-based word association solitaire game built entirely in React and TypeScript — no backend, all game state and logic on the frontend.',
+    description: 'A browser-based word association solitaire game built entirely in React and TypeScript. No backend — all game state, logic, and UI handled on the frontend.',
     tags: ['React', 'TypeScript', 'Vercel'],
     href: 'https://wordsolitaire.ajtech.dev',
     external: true,
-    year: '2024',
+    year: '2025',
     accent: '#7C3AED',
     accentBg: 'rgba(124,58,237,0.08)',
   },
 ];
 
 const posts = [
+  {
+    title: 'Building PKB MCP: Turning My Digital Chaos into a Queryable Brain',
+    date: 'Apr 17, 2026',
+    slug: 'building-pkb-mcp',
+    readTime: '14 min',
+    tags: ['Python', 'MCP', 'AI'],
+  },
   {
     title: 'Building MoneyMath: A Journey into Phased Retirement Planning',
     date: 'Apr 5, 2026',
