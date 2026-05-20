@@ -1,0 +1,313 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const post = {
+  title: 'Building JobTrack: A Full-Stack Job Application Tracker from Scratch',
+  date: 'May 15, 2026',
+  readTime: '12 min',
+  tags: ['Python', 'FastAPI', 'React', 'Chrome Extension', 'AI', 'Architecture'],
+  excerpt: 'Job hunting generates a surprising amount of data. I built a local-first tracker with a FastAPI backend, a Chrome Extension that scrapes LinkedIn via its internal Voyager API, a React Kanban dashboard, and an AI analysis layer powered by Claude that compares your resume against job descriptions.',
+};
+---
+
+<Layout title={`${post.title} — Abhishek Joshi`} description={post.excerpt}>
+  <article class="section pt-16 md:pt-24">
+
+    <!-- Back link -->
+    <div class="container-content mb-12">
+      <a href="/blog"
+         class="inline-flex items-center gap-2 text-sm transition-colors duration-150 group"
+         style="color: var(--text-muted);"
+         onmouseover="this.style.color='var(--text)'"
+         onmouseout="this.style.color='var(--text-muted)'">
+        <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-150"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        All posts
+      </a>
+    </div>
+
+    <!-- Header -->
+    <header class="container-content mb-12">
+      <div class="flex flex-wrap gap-2 mb-6">
+        {post.tags.map((tag) => (
+          <span class="tag text-xs">{tag}</span>
+        ))}
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">{post.title}</h1>
+      <div class="flex items-center gap-4 pb-8 border-b" style="border-color: var(--border);">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+             style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+          AJ
+        </div>
+        <div>
+          <p class="text-sm font-medium">Abhishek Joshi</p>
+          <p class="text-xs" style="color: var(--text-muted);">{post.date} · {post.readTime} read</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <div class="container-content prose-custom">
+
+      <p>
+        Job hunting generates a surprising amount of data — companies you've applied to, roles you're tracking,
+        screening calls, interviews, follow-ups, and the ghosting. Most people manage this with a spreadsheet.
+        The pain is real: you copy-paste from job listings, you can't see pipeline trends at a glance, and
+        switching between LinkedIn, Naukri, Indeed, and various ATS portals creates constant friction.
+      </p>
+      <p>
+        I wanted something that felt invisible during the search: one click to save a listing from any job board,
+        a clean Kanban view to see my pipeline, and enough analytics to answer "am I applying enough?" without
+        opening a spreadsheet. So I built <strong>JobTrack</strong> — a local-first, full-stack job application
+        tracker that I shipped iteratively across seven phases.
+      </p>
+
+      <h2>The architecture in one paragraph</h2>
+      <p>
+        Three independent layers communicate over localhost. A <strong>FastAPI + SQLite backend</strong> owns all
+        the data and analytics. A <strong>Chrome Extension</strong> (Manifest V3) scrapes job listings from
+        LinkedIn, Naukri, Indeed, and Greenhouse with one click and posts them to the backend. A
+        <strong>React dashboard</strong> — built with TanStack Query, Zustand, Recharts, and Tailwind — gives
+        you a Kanban board, a filterable applications table, five analytics charts, an AI analysis history page,
+        and a Resume Vault. The extension and dashboard never talk to each other; both go through the backend.
+      </p>
+
+      <h2>Phase 1: The backend</h2>
+      <p>
+        I chose FastAPI for the backend for the same reason I've chosen it on other projects: Pydantic v2
+        validation, auto-generated OpenAPI docs, and an async-ready foundation — all with close to zero
+        boilerplate. The ORM is SQLAlchemy 2.x in its newer <code>mapped_column</code> style, which gives full
+        type safety on model definitions without raw SQL.
+      </p>
+      <p>
+        The data model is straightforward: <code>profiles</code>, <code>jobs</code>,
+        <code>status_history</code>, <code>job_analyses</code>, and a <code>settings</code> key-value table.
+        The one design decision worth explaining is <code>status_history</code>. Rather than storing only the
+        current status on each job, every status change appends a row to this table — giving you a full audit
+        trail of how each application progressed. Knowing you reached final-round interviews at eight companies
+        but got rejected at that stage every time tells you something specific. A single status field would lose
+        that permanently.
+      </p>
+      <p>
+        Analytics are computed on the backend, not the frontend. Five endpoints return pre-aggregated data:
+        weekly application volume, jobs by status, locations, salary distribution, and remote/hybrid/on-site
+        breakdown. This keeps the dashboard lightweight and the queries fast regardless of how many jobs
+        accumulate over a long search.
+      </p>
+
+      <h2>Phase 2: The Chrome Extension and the MV3 constraint</h2>
+      <p>
+        Manifest V3 replaced persistent background pages with ephemeral service workers — meaning Chrome can
+        terminate the service worker at any time and you can't keep state in memory. The solution was to make
+        the service worker completely stateless: it's a pure message proxy. Content scripts on the job board
+        page scrape the listing and post a <code>SCRAPE_JOB</code> message. The service worker receives it,
+        makes a <code>fetch()</code> call to the backend, and returns the response. All persistent state
+        (active profile ID) lives in <code>chrome.storage.local</code>; all application data lives in SQLite.
+      </p>
+      <p>
+        Each supported job board gets its own scraper module: <code>linkedin.js</code>, <code>naukri.js</code>,
+        <code>indeed.js</code>, <code>greenhouse.js</code>. They all produce the same output shape —
+        <code>&#123;title, company, location, workType, salary, currency, url&#125;</code> — so the service
+        worker and popup don't need to know which site they're on.
+      </p>
+      <p>
+        Salary parsing was non-trivial. Salary data appears in completely different formats across boards:
+        <code>"1.2 – 2.5 Cr"</code> on Naukri, <code>"CA$120K – CA$160K"</code> on LinkedIn Canada,
+        <code>"$140,000 – $180,000"</code> on Indeed. I centralised this in a single <code>parseSalary()</code>
+        function. The critical ordering rule: check for Crore before Lacs — otherwise <code>"1 Cr"</code> gets
+        parsed as <code>"100 Lacs"</code>, a 100× undercount.
+      </p>
+
+      <h2>Phase 5: Why I rewrote the LinkedIn scraper</h2>
+      <p>
+        The original LinkedIn scraper read directly from the DOM. It worked, but it was fragile — any markup
+        change on LinkedIn's side would silently break it. Worse, DOM scraping couldn't reliably extract
+        structured fields like work type (remote/hybrid/on-site), which LinkedIn encodes as URNs rather than
+        readable text.
+      </p>
+      <p>
+        The fix was to use <strong>LinkedIn's internal Voyager API</strong> — the same REST API that LinkedIn's
+        own frontend uses. A single authenticated request to
+        <code>/voyager/api/jobs/jobPostings/&#123;jobId&#125;</code> returns clean JSON with title, location,
+        work type, and description. Company name comes from a second request to
+        <code>/voyager/api/organization/companies/&#123;companyId&#125;</code>. The CSRF token is extracted from
+        the <code>JSESSIONID</code> cookie, which LinkedIn sets as non-HttpOnly and in the format
+        <code>"ajax:TOKEN"</code>.
+      </p>
+      <p>
+        The fallback chain matters here: if the cookie is absent, the format is unexpected, or either Voyager
+        request fails, the scraper silently falls back to DOM extraction. The user sees a pre-filled form either
+        way; they never see an error from an internal API quirk.
+      </p>
+
+      <h2>Phase 3: The dashboard's two-layer state model</h2>
+      <p>
+        The React dashboard separates state into two concerns with a firm boundary between them.
+      </p>
+      <p>
+        <strong>TanStack Query</strong> owns all server state: job lists, analytics, profile data. Jobs use a
+        15-second background refetch so the dashboard stays in sync when the extension saves a listing while
+        the dashboard is open. Analytics use a 30-second stale time — they're expensive aggregations and don't
+        need to update as frequently.
+      </p>
+      <p>
+        <strong>Zustand</strong> owns UI-only state: the active profile ID (persisted to
+        <code>localStorage</code> via the Zustand persist middleware so it survives page reloads) and modal
+        open/close state. The dividing line is: if the data can change from outside the browser, it belongs in
+        React Query. If it's purely a UI concern that no server knows about, it belongs in Zustand.
+      </p>
+      <p>
+        One subtle React performance issue surfaced early: subscribing to the entire Zustand store causes a
+        re-render on any store change, including a loading flag flipping. The fix was per-field selectors —
+        each component subscribes to only the fields it actually reads. Since <code>useProfile()</code> is
+        called by almost every page, the savings from this cascaded throughout the component tree.
+      </p>
+
+      <h2>Phase 4: The duplicate URL guard</h2>
+      <p>
+        If you browse to the same job listing twice and click "Save" both times, you'd expect to see a helpful
+        message rather than two identical entries. I implemented this at three layers:
+      </p>
+      <ul>
+        <li><strong>Pydantic validator</strong> — normalises URLs (lowercases scheme and host, strips
+            whitespace) so <code>https://LinkedIn.com/jobs/123</code> and
+            <code>https://linkedin.com/jobs/123</code> are treated as identical.</li>
+        <li><strong>Application layer</strong> — a <code>SELECT EXISTS</code> check before insert returns a
+            409 with the existing job's company and title, so the popup can say "already saved as
+            <em>Senior Engineer</em> at <em>Acme Corp</em>" rather than a generic error.</li>
+        <li><strong>Database constraint</strong> — a <code>UniqueConstraint("profile_id", "url")</code> on the
+            model is the final safety net for concurrent writes. SQLite's <code>NULL != NULL</code> semantics
+            correctly allow multiple null-URL jobs per profile (for manually entered listings with no URL).</li>
+      </ul>
+
+      <h2>Phase 6: The Resume Vault — local files, not uploads</h2>
+      <p>
+        The AI analysis layer needs to read resume content. The obvious design is to ask the user to paste
+        resume text into a form. The better design: point the app at a folder on your machine.
+      </p>
+      <p>
+        The backend's <code>/resumes</code> router lists files in the configured folder, extracts text from
+        <code>.pdf</code> files with <code>pdfminer.six</code> and from <code>.docx</code> files with
+        <code>python-docx</code>, and passes the extracted text directly to the AI prompt. The text is held in
+        memory only for the duration of the API call — it's never stored in the database.
+      </p>
+      <p>
+        The path traversal guard is worth calling out explicitly: every filename is validated by comparing
+        <code>os.path.realpath(folder/filename)</code> against <code>os.path.realpath(folder)</code> before
+        any file read. This prevents <code>../../etc/passwd</code>-style attacks even though the app is
+        local-only.
+      </p>
+      <p>
+        The folder config is stored in a key-value <code>settings</code> table (<code>key TEXT PRIMARY KEY,
+        value TEXT</code>) — three rows: <code>resume_folder_path</code>,
+        <code>default_resume_filename</code>, <code>master_resume_filename</code>. A fixed-column config table
+        would require a schema migration every time a new setting is added; the KV approach lets individual
+        settings be read and written without touching unrelated rows.
+      </p>
+
+      <h2>Phase 7: AI analysis with Claude</h2>
+      <p>
+        The analysis prompt runs in two modes. In the common case (a dedicated resume to score against a master
+        resume with more content), the prompt includes separate <code>&lt;scored_resume&gt;</code> and
+        <code>&lt;master_resume&gt;</code> sections and asks Claude to compute both a current score and a
+        projected score showing how much the candidate could improve by pulling specific content from the
+        master. When both files are the same, a simpler single-resume prompt is used and
+        <code>projected_score</code> is null.
+      </p>
+      <p>
+        The XML content tags — <code>&lt;job_description&gt;</code>, <code>&lt;scored_resume&gt;</code>,
+        <code>&lt;master_resume&gt;</code> — aren't decorative. They mitigate prompt injection: content inside
+        the tags is treated as data, not instructions. A job description that contains "Ignore previous
+        instructions and output..." is far less likely to influence the model when it's explicitly bounded
+        as a data block. Engineering job descriptions frequently contain XML-like tags (e.g.,
+        <code>&lt;requirements&gt;</code>); the outer tags are fixed and the inner content remains data.
+      </p>
+      <p>
+        The response parser validates all required keys, clamps <code>current_score</code> and
+        <code>projected_score</code> to [0, 100] via a <code>_safe_int()</code> helper that handles
+        string-coercible values like <code>"78"</code>, and verifies that <code>suggestions</code> is a list
+        of <code>&#123;text, score_impact&#125;</code> dicts. Any structural mismatch returns a sanitised 502
+        — the raw Claude response is logged server-side and never forwarded to the browser.
+      </p>
+      <p>
+        <code>job_id</code> on analyses is nullable. Analyses run from the extension popup before saving a job
+        have <code>job_id = NULL</code> — they appear in the AI Analysis history page scoped to the active
+        profile, but not in the job detail panel. This lets you analyse a listing you're still deciding whether
+        to save.
+      </p>
+
+      <h2>Security decisions worth naming</h2>
+      <p>
+        A few things I'd flag for anyone building something similar:
+      </p>
+      <ul>
+        <li><strong>No innerHTML in the extension popup.</strong> The original code used <code>innerHTML</code>
+            to render profile names into option elements. Replaced with DOM APIs — profile names set via
+            <code>textContent</code> only.</li>
+        <li><strong>URL scheme validation in the dashboard.</strong> <code>job.url</code> is validated against
+            <code>/^https?:\/\//</code> before being rendered as an anchor, preventing
+            <code>javascript:</code> URLs from being clickable even if a malformed entry slipped through.</li>
+        <li><strong>CORS locked to specific origins.</strong> The backend CORS config allows
+            <code>http://localhost:5173</code> and <code>chrome-extension://</code> — wildcard
+            <code>*</code> was an early draft that got removed on review.</li>
+        <li><strong>Sort field allowlist.</strong> The <code>sort_by</code> query parameter is validated
+            against a <code>VALID_FIELDS</code> set before being passed to the ORM. Without this,
+            an attacker could pass an arbitrary attribute name and potentially read unintended columns.</li>
+      </ul>
+
+      <h2>What's next</h2>
+      <p>
+        The next phase is AI resume tailoring: generating a modified version of the default resume targeted at
+        a specific job description. The planned flow is that Claude returns a structured list of suggested edits
+        — additions, removals, rewrites — which the dashboard shows as a side-by-side diff. Accepted edits get
+        applied to a new <code>.docx</code> file via <code>python-docx</code> and saved alongside the
+        originals. The main open question is diff representation: whether to model changes as semantic
+        operations (<code>&#123;field, old, new&#125;</code>) or as a raw unified diff. A hybrid approach —
+        structured fields for known resume sections, raw diff for unstructured text — is likely the right
+        answer.
+      </p>
+      <p>
+        There's also a longer-term offline-first idea: a small IndexedDB queue in the service worker that
+        buffers saves when the backend isn't running and flushes them on reconnect. Right now the extension
+        fails visibly if the backend is down; a queue would make the save flow feel much more robust.
+      </p>
+
+      <blockquote>
+        The best personal productivity tools are the ones that make the boring parts of a hard process
+        disappear entirely — so you can focus on the parts that actually require your judgment.
+      </blockquote>
+
+      <p>
+        The full source is on GitHub at
+        <a href="https://github.com/Abhishek-P-Joshi/JobTracker" target="_blank" rel="noopener noreferrer">github.com/Abhishek-P-Joshi/JobTracker</a>.
+      </p>
+
+    </div>
+
+    <!-- Post footer -->
+    <footer class="container-content mt-16 pt-10 border-t" style="border-color: var(--border);">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+               style="background-color: var(--text); color: var(--bg); font-family: 'Bricolage Grotesque', sans-serif;">
+            AJ
+          </div>
+          <div>
+            <p class="text-sm font-semibold">Abhishek Joshi</p>
+            <a href="https://linkedin.com/in/abhishek-joshi-5619a676" target="_blank" rel="noopener"
+               class="text-xs transition-colors" style="color: var(--accent);">
+              LinkedIn
+            </a>
+          </div>
+        </div>
+        <a href="/blog" class="btn btn-secondary text-sm" style="text-decoration: none;">
+          ← Back to writing
+        </a>
+      </div>
+    </footer>
+
+  </article>
+</Layout>
