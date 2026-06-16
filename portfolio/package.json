@@ -9,9 +9,10 @@
     "preview": "astro preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "astro": "6.1.5",
-    "tailwindcss": "^4.2.2",
-    "@tailwindcss/vite": "^4.2.2"
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

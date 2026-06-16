@@ -1,0 +1,40 @@
+## Vercel Web Analytics Implementation
+
+Successfully installed and configured Vercel Web Analytics for this Astro project.
+
+### Changes Made:
+
+**1. Package Installation:**
+- Installed `@vercel/analytics` package (version 1.x)
+- Updated `package.json` with new dependency
+- Updated `package-lock.json` to reflect new dependency
+
+**2. Analytics Integration in Layout:**
+- Modified `src/layouts/Layout.astro`
+- Added import statement: `import Analytics from '@vercel/analytics/astro'`
+- Inserted `<Analytics />` component in the `<head>` section
+- Placed before theme initialization script to ensure early loading
+
+**3. Implementation Details:**
+- Followed official Vercel documentation retrieved from https://vercel.com/docs/analytics/quickstart
+- Used Astro-specific Analytics component from `@vercel/analytics/astro`
+- Component placed in the main Layout.astro file to track all pages
+- Analytics will automatically begin collecting data once deployed to Vercel
+
+**4. Verification:**
+- Build completed successfully with no errors
+- All 8 pages built correctly (homepage, about, blog posts, work, 404)
+- No TypeScript or linting errors introduced
+
+### Files Modified:
+- `package.json` - Added @vercel/analytics dependency
+- `package-lock.json` - Locked dependency versions
+- `src/layouts/Layout.astro` - Added Analytics component
+
+### Next Steps:
+Once deployed to Vercel, analytics will automatically start tracking:
+- Page views
+- Visitor data
+- Performance metrics
+
+The analytics dashboard will be available in the Vercel project settings.
